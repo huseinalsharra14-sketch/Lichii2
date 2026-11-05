@@ -375,6 +375,7 @@ EmitContext::EmitContext(IR::Program& program, Bindings& bindings, const Profile
     SetupImages(bindings);
     SetupTextures(bindings);
     DefineHelperFunctions();
+    DefineSoftwareMatrixFunctions(program);
     DefineConstants();
 }
 

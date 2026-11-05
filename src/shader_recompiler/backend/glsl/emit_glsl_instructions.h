@@ -759,7 +759,7 @@ void EmitDPdyFine(EmitContext& ctx, IR::Inst& inst, std::string_view op_a);
 void EmitDPdxCoarse(EmitContext& ctx, IR::Inst& inst, std::string_view op_a);
 void EmitDPdyCoarse(EmitContext& ctx, IR::Inst& inst, std::string_view op_a);
 
-void EmitTensorMulAdd(EmitContext& ctx, IR::Inst& inst, const IR::Value& a,
-                      const IR::Value& b, const IR::Value& c);
+void EmitTensorMulAdd(EmitContext& ctx, IR::Inst& inst, std::string_view a, std::string_view b,
+                      std::string_view c);
 
 } // namespace Shader::Backend::GLSL

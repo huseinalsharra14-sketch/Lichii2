@@ -246,6 +246,7 @@ if (ENABLE_OPENGL)
         backend/glsl/emit_glsl_select.cpp
         backend/glsl/emit_glsl_shared_memory.cpp
         backend/glsl/emit_glsl_special.cpp
+        backend/glsl/emit_glsl_tensor.cpp
         backend/glsl/emit_glsl_undefined.cpp
         backend/glsl/emit_glsl_warp.cpp
         backend/glsl/glsl_emit_context.cpp

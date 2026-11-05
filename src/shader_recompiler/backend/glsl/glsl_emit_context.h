@@ -165,6 +165,7 @@ private:
     void DefineStorageBuffers(Bindings& bindings);
     void DefineGenericOutput(size_t index, u32 invocations);
     void DefineHelperFunctions();
+    void DefineSoftwareMatrixFunctions(const IR::Program& program);
     void DefineConstants();
     std::string DefineGlobalMemoryFunctions();
     void SetupImages(Bindings& bindings);
