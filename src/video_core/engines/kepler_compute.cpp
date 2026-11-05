@@ -909,12 +909,13 @@ std::pair<std::vector<u32>, std::vector<u32>> KeplerCompute::NativeImageHandles(
 bool KeplerCompute::UpscaleInsteadOfNativeProgram() {
     const auto& cbuf = launch_description.const_buffer_config[0];
     const GPUVAddr cbuf_address = (GPUVAddr{cbuf.address_high} << 32) | cbuf.address_low;
-    if (!(launch_description.const_buffer_enable_mask & 1) || cbuf.size.Value() < 0x120 ||
-        !memory_manager.IsFullyMappedRange(cbuf_address, cbuf.size.Value())) {
+    const u32 cbuf_size = cbuf.size.Value();
+    if (!(launch_description.const_buffer_enable_mask & 1) || cbuf_size < 0x84 ||
+        !memory_manager.IsFullyMappedRange(cbuf_address, cbuf_size)) {
         return false;
     }
     const auto image = [&](u32 offset) -> std::optional<Texture::TICEntry> {
-        if (offset + sizeof(u32) > cbuf.size.Value()) return std::nullopt;
+        if (offset + sizeof(u32) > cbuf_size) return std::nullopt;
         const u32 tic_index = memory_manager.Read<u32>(cbuf_address + offset) & 0xfffff;
         if (tic_index > regs.tic.limit || !memory_manager.IsFullyMappedRange(
                 regs.tic.Address() + u64{tic_index} * sizeof(Texture::TICEntry),
@@ -964,10 +965,11 @@ bool KeplerCompute::UpscaleInsteadOfNativeProgram() {
     if (!upscale_pair(input, output, false)) {
         input.reset();
         output.reset();
-        for (u32 first = 0x80; first < 0x120 && !input; first += 4) {
+        const u32 handles_end = std::min<u32>(0x120, cbuf_size);
+        for (u32 first = 0x80; first + sizeof(u32) <= handles_end && !input; first += 4) {
             const auto from = memory_manager.Read<u32>(cbuf_address + first) != 0 ? image(first)
                                                                                     : std::nullopt;
-            for (u32 second = first + 4; from && second < 0x120; second += 4) {
+            for (u32 second = first + 4; from && second + sizeof(u32) <= handles_end; second += 4) {
                 if (memory_manager.Read<u32>(cbuf_address + second) == 0) continue;
                 const auto to = image(second);
                 if (upscale_pair(from, to)) {
@@ -979,6 +981,22 @@ bool KeplerCompute::UpscaleInsteadOfNativeProgram() {
         }
     }
     if (!input || !output) {
+        static u32 reported{};
+        if (reported++ < 8) {
+            const auto [reads, stores] = NativeImageHandles(regs.code_loc.Address());
+            const auto describe = [&](const std::vector<u32>& offsets) {
+                std::string text;
+                for (const u32 offset : offsets) {
+                    const auto tic = image(offset);
+                    text += tic ? fmt::format(" +{:#x}={}x{}/fmt{}", offset, tic->Width(), tic->Height(),
+                                              static_cast<u32>(tic->format.Value()))
+                                : fmt::format(" +{:#x}=none", offset);
+                }
+                return text.empty() ? std::string{" (none)"} : text;
+            };
+            LOG_INFO(HW_GPU, "Upscale stand-in found no image pair: program {:#x} cbuf0 size {:#x}, reads{}, stores{}",
+                     regs.code_loc.Address(), cbuf_size, describe(reads), describe(stores));
+        }
         return false;
     }
     using RTFormat = Tegra::RenderTargetFormat;
